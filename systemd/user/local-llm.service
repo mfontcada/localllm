@@ -1,0 +1,15 @@
+[Unit]
+Description=Local LLM Chat
+After=network-online.target nemo-speech.service
+Wants=nemo-speech.service
+
+[Service]
+# Replace this path with the absolute path to your local-llm checkout.
+WorkingDirectory=/path/to/localllm
+ExecStart=%h/.local/bin/uv run --frozen python app.py --ollama-url http://127.0.0.1:11434 --speech-url http://127.0.0.1:8080
+Environment="PATH=%h/.local/bin:/usr/local/bin:/usr/bin"
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

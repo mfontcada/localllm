@@ -290,42 +290,21 @@ Create the user-service directory:
 mkdir -p "$HOME/.config/systemd/user"
 ```
 
-Create `~/.config/systemd/user/nemo-speech.service` with the same GPU or CPU
-option selected in step 4 (`--gpu -1` is the CPU fallback):
+Copy the service files included in this repository into the user-service
+directory:
 
-```ini
-[Unit]
-Description=NeMo Speech server
-After=network-online.target
-
-[Service]
-ExecStart=%h/.local/bin/nemo-speech serve --asr-model nemotron-3.5 --gpu 0 --host 127.0.0.1 --port 8080 --no-ui
-Environment="PATH=%h/.local/bin:/usr/local/bin:/usr/bin"
-Restart=on-failure
-RestartSec=5
-
-[Install]
-WantedBy=default.target
+```bash
+cp systemd/user/nemo-speech.service "$HOME/.config/systemd/user/"
+cp systemd/user/local-llm.service "$HOME/.config/systemd/user/"
 ```
 
-Create `~/.config/systemd/user/local-llm.service`, replacing
-`/path/to/localllm` with the absolute path to this checkout:
+The NeMo unit defaults to GPU 0. If using the CPU fallback from step 4, edit
+`nemo-speech.service` and change `--gpu 0` to `--gpu -1`. In
+`local-llm.service`, replace `/path/to/localllm` with the absolute path to this
+checkout:
 
-```ini
-[Unit]
-Description=Local LLM Chat
-After=network-online.target nemo-speech.service
-Wants=nemo-speech.service
-
-[Service]
-WorkingDirectory=/path/to/localllm
-ExecStart=%h/.local/bin/uv run --frozen python app.py --ollama-url http://127.0.0.1:11434 --speech-url http://127.0.0.1:8080
-Environment="PATH=%h/.local/bin:/usr/local/bin:/usr/bin"
-Restart=on-failure
-RestartSec=5
-
-[Install]
-WantedBy=default.target
+```bash
+sed -i "s|/path/to/localllm|$(pwd)|" "$HOME/.config/systemd/user/local-llm.service"
 ```
 
 Enable and start both services:
