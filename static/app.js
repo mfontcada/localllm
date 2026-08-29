@@ -284,6 +284,12 @@ ui.prompt.addEventListener("keydown", event => {
     ui.composer.requestSubmit();
   }
 });
+document.addEventListener("keydown", event => {
+  if (event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey && event.key.toLowerCase() === "m") {
+    event.preventDefault();
+    if (!ui.mic.disabled) ui.mic.click();
+  }
+});
 ui.prompt.addEventListener("input", resizePrompt);
 ui.stop.addEventListener("click", () => request?.abort());
 ui.mic.addEventListener("click", () => voice ? stopVoice() : startVoice());
