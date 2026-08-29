@@ -47,8 +47,14 @@ uv run python -m unittest discover -s tests
 
 ## Roadmap
 
-Images, local voice input/output, tool calling, web search, sandboxed code
-execution, saved chats, and authentication.
+- Images
+- Local voice input
+- Local voice output
+- Tool calling
+- Web search
+- Sandboxed code execution
+- Saved chats
+- Authentication
 
 ## License
 
