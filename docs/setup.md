@@ -291,20 +291,23 @@ mkdir -p "$HOME/.config/systemd/user"
 ```
 
 Copy the service files included in this repository into the user-service
-directory:
+directory and configure the app service to use the current checkout:
 
 ```bash
+repo_dir="$(pwd)"
+test -f "$repo_dir/app.py"
 cp systemd/user/nemo-speech.service "$HOME/.config/systemd/user/"
 cp systemd/user/local-llm.service "$HOME/.config/systemd/user/"
+sed -i "s|^WorkingDirectory=.*|WorkingDirectory=$repo_dir|" \
+  "$HOME/.config/systemd/user/local-llm.service"
 ```
 
 The NeMo unit defaults to GPU 0. If using the CPU fallback from step 4, edit
-`nemo-speech.service` and change `--gpu 0` to `--gpu -1`. In
-`local-llm.service`, replace `/path/to/localllm` with the absolute path to this
-checkout:
+`nemo-speech.service` and change `--gpu 0` to `--gpu -1`. Confirm that the app
+service now contains the correct path before enabling it:
 
 ```bash
-sed -i "s|/path/to/localllm|$(pwd)|" "$HOME/.config/systemd/user/local-llm.service"
+systemctl --user cat local-llm.service | rg '^WorkingDirectory='
 ```
 
 Enable and start both services:
