@@ -270,9 +270,9 @@ The first response should list the installed Ollama models. The second should
 contain `"available": true` when NeMo is ready.
 
 Open <http://127.0.0.1:3000>, choose a model, and send a text message. Select
-Mic, grant browser microphone permission, speak, and select Stop. The final
-transcript is placed in the existing prompt draft and is not submitted
-automatically.
+Mic (or press `Alt+M`), grant browser microphone permission, speak, and select
+Stop (or press `Alt+M` again). The final transcript is placed in the existing
+prompt draft and is not submitted automatically.
 
 If the page was loaded before NeMo became ready, reload it. An unavailable
 speech service intentionally leaves Mic disabled without displaying an error;
