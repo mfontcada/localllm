@@ -1,0 +1,41 @@
+:root { font-family: Inter,system-ui,sans-serif; color: #e8e8ea; background: #0f1012; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+button,select,textarea { font: inherit; color: inherit; }
+main { display: grid; grid-template-rows: auto 1fr auto auto; width: min(920px,100%); min-height: 100vh; margin: auto; padding: 20px; }
+header,nav,form { display: flex; align-items: center; gap: 10px; }
+header { justify-content: space-between; padding-bottom: 16px; border-bottom: 1px solid #292b30; }
+h1 { margin: 0; font-size: 1.2rem; }
+small { color: #969aa3; }
+select,button,form { border: 1px solid #343740; border-radius: 10px; background: #1a1c20; }
+select,button { padding: 9px 12px; }
+button { border: 0; color: #17181a; background: #ececf1; font-weight: 650; cursor: pointer; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+.secondary { color: #e8e8ea; background: #25282e; }
+#messages { overflow-y: auto; padding: 28px 0; }
+.empty { max-width: 520px; margin: 18vh auto 0; color: #a6a9b0; text-align: center; }
+.empty h2 { color: #ececf1; }
+.message { max-width: 82%; margin-bottom: 22px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.message .role { margin-bottom: 5px; color: #8e929b; font-size: .75rem; font-weight: 700; text-transform: uppercase; }
+.message.user { margin-left: auto; padding: 13px 15px; border-radius: 15px; background: #24272d; }
+.message.error { color: #ffaaa2; }
+form { padding: 8px; border-radius: 16px; }
+textarea { flex: 1; max-height: 180px; padding: 9px; border: 0; outline: 0; resize: none; background: transparent; }
+.hint { margin-top: 8px; text-align: center; }
+.hidden { display: none; }
+@media (max-width:680px) {
+  main { padding: 12px; }
+  header { align-items: flex-start; }
+  nav { flex-wrap: wrap; justify-content: flex-end; }
+  nav label { display: none; }
+  select { max-width: 150px; }
+  .message { max-width: 92%; }
+}
+@media (prefers-color-scheme:light) {
+  :root { color: #25262a; background: #fafafa; }
+  header { border-color: #dddfe4; }
+  small,.empty { color: #686c74; }
+  .empty h2 { color: #25262a; }
+  select,textarea,form { color: #25262a; border-color: #d8dae0; background: #fff; }
+  .secondary,.message.user { color: #25262a; background: #e9eaf0; }
+}
