@@ -1,5 +1,6 @@
 const get = id => document.getElementById(id);
 const ui = Object.fromEntries(["clear", "composer", "messages", "model", "prompt", "send", "status", "stop"].map(id => [id, get(id)]));
+const MODEL_KEY = "local-llm-model";
 let messages = [], request;
 
 function busy(value) {
@@ -29,6 +30,8 @@ async function loadModels() {
     const data = await response.json();
     if (!response.ok || !data.models.length) throw Error(data.error || "No Ollama models are installed");
     data.models.forEach(name => ui.model.add(new Option(name, name)));
+    const saved = localStorage.getItem(MODEL_KEY);
+    if (data.models.includes(saved)) ui.model.value = saved;
     ui.status.textContent = `${data.models.length} local model${data.models.length === 1 ? "" : "s"} available`;
     ui.send.disabled = false;
   } catch (error) {
@@ -109,6 +112,7 @@ ui.prompt.addEventListener("input", () => {
   ui.prompt.style.height = `${ui.prompt.scrollHeight}px`;
 });
 ui.stop.addEventListener("click", () => request?.abort());
+ui.model.addEventListener("change", () => localStorage.setItem(MODEL_KEY, ui.model.value));
 ui.clear.addEventListener("click", () => {
   messages = [];
   ui.messages.innerHTML = '<div class="empty"><h2>New conversation</h2><p>The previous context has been cleared.</p></div>';
