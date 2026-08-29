@@ -23,11 +23,12 @@
         <p>This chat stays on your computer and uses your local Ollama service.</p>
       </div>
     </section>
-    <form id="composer">
-      <textarea id="prompt" rows="1" aria-label="Message" placeholder="Message your local model" required></textarea>
-      <button id="send">Send</button><button id="stop" class="secondary hidden" type="button">Stop</button>
-    </form>
-    <small class="hint">Enter to send · Shift+Enter for a new line</small>
+    <footer>
+      <form id="composer">
+        <textarea id="prompt" rows="1" aria-label="Message" placeholder="Message your local model" required></textarea>
+        <button id="send">Send</button><button id="stop" class="secondary hidden" type="button">Stop</button>
+      </form>
+    </footer>
   </main>
   <script src="/app.js"></script>
 </body>
