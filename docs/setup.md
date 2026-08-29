@@ -85,18 +85,18 @@ sudo systemctl status ollama
 ```
 
 Ollama defaults to a 4K context on GPUs with less than 24 GiB of memory. Set a
-16K starting context for this stack:
+16K starting context for this stack without opening an interactive editor:
 
 ```bash
-sudo systemctl edit ollama
+printf '%s\n' \
+  '[Service]' \
+  'Environment="OLLAMA_CONTEXT_LENGTH=16384"' \
+  | sudo systemctl edit --stdin ollama
 ```
 
-Add this override:
-
-```ini
-[Service]
-Environment="OLLAMA_CONTEXT_LENGTH=16384"
-```
+If the installed systemd does not support `--stdin`, run
+`sudo SYSTEMD_EDITOR=EDITOR systemctl edit ollama`, replace `EDITOR` with an
+installed editor such as `vi` or `nvim`, and enter the same two lines.
 
 Apply it:
 
@@ -280,56 +280,82 @@ text chat remains usable.
 
 ## 6. Keep the stack running
 
-Ollama is already managed by systemd. Keep NeMo and the app in separate `tmux`
-sessions:
+Ollama is managed by the system service. Run NeMo and the app as systemd user
+services so they restart after failures and their logs remain available in the
+journal.
+
+Create the user-service directory:
 
 ```bash
-tmux new -s nemo-speech
+mkdir -p "$HOME/.config/systemd/user"
 ```
 
-Run the NeMo server command from step 4, then detach with `Ctrl+B`, followed by
-`D`. Start another session for the app:
+Create `~/.config/systemd/user/nemo-speech.service` with the same GPU or CPU
+option selected in step 4 (`--gpu -1` is the CPU fallback):
+
+```ini
+[Unit]
+Description=NeMo Speech server
+After=network-online.target
+
+[Service]
+ExecStart=%h/.local/bin/nemo-speech serve --asr-model nemotron-3.5 --gpu 0 --host 127.0.0.1 --port 8080 --no-ui
+Environment="PATH=%h/.local/bin:/usr/local/bin:/usr/bin"
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+```
+
+Create `~/.config/systemd/user/local-llm.service`, replacing
+`/path/to/localllm` with the absolute path to this checkout:
+
+```ini
+[Unit]
+Description=Local LLM Chat
+After=network-online.target nemo-speech.service
+Wants=nemo-speech.service
+
+[Service]
+WorkingDirectory=/path/to/localllm
+ExecStart=%h/.local/bin/uv run --frozen python app.py --ollama-url http://127.0.0.1:11434 --speech-url http://127.0.0.1:8080
+Environment="PATH=%h/.local/bin:/usr/local/bin:/usr/bin"
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+```
+
+Enable and start both services:
 
 ```bash
-tmux new -s local-llm
-cd /path/to/localllm
-uv run --frozen python app.py
+systemctl --user daemon-reload
+systemctl --user enable --now nemo-speech.service local-llm.service
 ```
 
-Detach the same way. Inspect or resume the sessions with:
-
-```bash
-tmux list-sessions
-tmux attach -t nemo-speech
-tmux attach -t local-llm
-```
-
-Stop either foreground process with `Ctrl+C`. Stop Ollama separately when it is
-no longer needed:
-
-```bash
-sudo systemctl stop ollama
-```
-
-### Optional persistent deployment
-
-For unattended use, replace the two `tmux` sessions with systemd user services
-named `nemo-speech.service` and `local-llm.service`. Configure them to use the
-same commands and loopback addresses documented above, restart on failure, and
-write logs to the journal. Order the app after NeMo, but do not make speech a
-hard requirement because text chat remains useful when NeMo is unavailable.
+`Wants=` starts NeMo when the app starts, but does not make speech a hard
+requirement: text chat remains usable if NeMo is unavailable. The app starts
+after the NeMo service has been launched; readiness can still take a few
+seconds while the model loads.
 
 Enable user lingering only if these services must start at boot without an
-interactive login. Inspect them with:
+interactive login:
+
+```bash
+loginctl enable-linger "$USER"
+```
+
+Inspect, restart, or stop the services with:
 
 ```bash
 systemctl --user status nemo-speech.service local-llm.service
 journalctl --user -u nemo-speech.service
 journalctl --user -u local-llm.service
+systemctl --user restart nemo-speech.service local-llm.service
+systemctl --user disable --now nemo-speech.service local-llm.service
 ```
-
-Service files are intentionally not supplied because their executable and
-repository paths depend on the installation.
 
 ## Private remote access
 
