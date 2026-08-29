@@ -26,6 +26,12 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 footer { min-width: 0; padding-top: 12px; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
 form { min-width: 0; padding: 8px; border-radius: 16px; }
 textarea { min-width: 0; flex: 1 1 auto; max-height: 180px; padding: 9px; border: 0; outline: 0; resize: none; overflow-y: auto; background: transparent; }
+#mic { min-width: 54px; }
+#mic.recording { color: #fff; background: #b83232; }
+#voice-status { display: block; margin: 5px 10px 0; font-size: .75rem; }
+#voice-status:empty { display: none; }
+#voice-status[data-state="active"] { color: #d7d9df; }
+#voice-status[data-state="error"] { color: #ffaaa2; }
 .hidden { display: none; }
 @media (max-width:680px) {
   main { padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 0 max(12px, env(safe-area-inset-left)); }
@@ -55,4 +61,6 @@ textarea { min-width: 0; flex: 1 1 auto; max-height: 180px; padding: 9px; border
   .empty h2 { color: #25262a; }
   select,textarea,form { color: #25262a; border-color: #d8dae0; background: #fff; }
   .secondary,.message.user { color: #25262a; background: #e9eaf0; }
+  #voice-status[data-state="active"] { color: #4f535b; }
+  #voice-status[data-state="error"] { color: #a62020; }
 }
