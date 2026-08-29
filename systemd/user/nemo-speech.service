@@ -1,0 +1,12 @@
+[Unit]
+Description=NeMo Speech server
+After=network-online.target
+
+[Service]
+ExecStart=%h/.local/bin/nemo-speech serve --asr-model nemotron-3.5 --gpu 0 --host 127.0.0.1 --port 8080 --no-ui
+Environment="PATH=%h/.local/bin:/usr/local/bin:/usr/bin"
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
