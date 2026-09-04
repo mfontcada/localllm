@@ -1,11 +1,11 @@
-:root { font-family: Inter,system-ui,sans-serif; color: #e8e8ea; background: #0f1012; }
+:root { --app-height: 100vh; font-family: Inter,system-ui,sans-serif; color: #e8e8ea; background: #0f1012; }
 * { box-sizing: border-box; }
-html,body { min-height: 100%; }
-body { min-height: 100vh; margin: 0; }
+html,body { min-height: var(--app-height); }
+body { min-height: var(--app-height); margin: 0; }
 button,select,textarea { font: inherit; color: inherit; }
-main { display: grid; grid-template-rows: auto minmax(0,1fr) auto; width: min(920px,100%); min-height: 100vh; height: 100vh; margin: auto; padding: 20px; }
+main { display: grid; grid-template-rows: auto minmax(0,1fr) auto; width: min(920px,100%); min-height: var(--app-height); height: var(--app-height); margin: auto; padding: 20px; }
 header,nav,form { display: flex; align-items: center; gap: 10px; }
-header { min-width: 0; justify-content: space-between; padding-bottom: 16px; border-bottom: 1px solid #292b30; }
+header { position: sticky; top: 0; z-index: 2; align-self: start; min-width: 0; justify-content: space-between; padding-bottom: 16px; border-bottom: 1px solid #292b30; background: #0f1012; }
 header > div { min-width: 0; }
 header small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 nav { min-width: 0; justify-content: flex-end; }
@@ -16,7 +16,7 @@ select,button { padding: 9px 12px; }
 button { border: 0; color: #17181a; background: #ececf1; font-weight: 650; cursor: pointer; }
 button:disabled { opacity: .45; cursor: not-allowed; }
 .secondary { color: #e8e8ea; background: #25282e; }
-#messages { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 28px 0; scrollbar-gutter: stable; }
+#messages { min-height: 0; overflow-y: auto; overscroll-behavior: contain; overflow-anchor: none; padding: 28px 0; scrollbar-gutter: stable; }
 .empty { max-width: 520px; margin: 18vh auto 0; color: #a6a9b0; text-align: center; }
 .empty h2 { color: #ececf1; }
 .message { max-width: 82%; margin-bottom: 22px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -72,12 +72,11 @@ textarea { min-width: 0; flex: 1 1 auto; max-height: 180px; padding: 9px; border
   .message { max-width: 96%; }
 }
 @supports (height: 100dvh) {
-  body { min-height: 100dvh; }
-  main { min-height: 100dvh; height: 100dvh; }
+  :root { --app-height: 100dvh; }
 }
 @media (prefers-color-scheme:light) {
   :root { color: #25262a; background: #fafafa; }
-  header { border-color: #dddfe4; }
+  header { border-color: #dddfe4; background: #fafafa; }
   small,.empty { color: #686c74; }
   .empty h2 { color: #25262a; }
   select,textarea,form,.voice-popover { color: #25262a; border-color: #d8dae0; background: #fff; }

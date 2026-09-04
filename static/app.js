@@ -13,6 +13,7 @@ const SPEECH_GRACE_MS = 500;
 let messages = [], request, voice;
 let modelsReady = false, voiceAvailable = false;
 let voiceStatusTimer;
+let scrollFrame;
 
 ui.voice_submit_auto.checked = localStorage.getItem(VOICE_AUTO_SEND_KEY) === "true";
 ui.voice_submit_review.checked = !ui.voice_submit_auto.checked;
@@ -23,6 +24,29 @@ function resizePrompt() {
   ui.prompt.style.height = "auto";
   ui.prompt.style.height = `${ui.prompt.scrollHeight}px`;
 }
+
+function scrollMessagesToEnd() {
+  ui.messages.scrollTop = ui.messages.scrollHeight;
+}
+
+function scheduleScrollMessagesToEnd() {
+  cancelAnimationFrame(scrollFrame);
+  scrollFrame = requestAnimationFrame(() => {
+    scrollFrame = null;
+    scrollMessagesToEnd();
+  });
+}
+
+function syncAppHeight() {
+  const height = window.visualViewport?.height;
+  if (height) {
+    document.documentElement.style.setProperty("--app-height", `${height}px`);
+    scheduleScrollMessagesToEnd();
+  }
+}
+
+syncAppHeight();
+window.visualViewport?.addEventListener("resize", syncAppHeight);
 
 function updateControls() {
   const chatting = Boolean(request), speaking = Boolean(voice);
@@ -56,7 +80,7 @@ function add(role, content = "") {
   body.textContent = content;
   article.append(label, body);
   ui.messages.append(article);
-  ui.messages.scrollTop = ui.messages.scrollHeight;
+  scrollMessagesToEnd();
   return body;
 }
 
@@ -111,7 +135,7 @@ function consume(line, state) {
   if (event.error) throw Error(event.error);
   state.text += event.message?.content || "";
   state.body.textContent = state.text;
-  ui.messages.scrollTop = ui.messages.scrollHeight;
+  scrollMessagesToEnd();
 }
 
 async function chat(text) {
@@ -146,14 +170,17 @@ async function chat(text) {
   } catch (error) {
     if (error.name === "AbortError") {
       state.body.textContent = state.text || "Stopped.";
+      scrollMessagesToEnd();
       if (state.text) messages.push({ role: "assistant", content: state.text });
     } else {
       state.body.parentElement.classList.add("error");
       state.body.textContent = error.message;
+      scrollMessagesToEnd();
       messages.pop();
     }
   } finally {
     request = null;
+    scrollMessagesToEnd();
     updateControls();
     ui.prompt.focus();
   }
@@ -388,7 +415,11 @@ document.addEventListener("keydown", event => {
     stopVoice();
   }
 });
-ui.prompt.addEventListener("input", resizePrompt);
+ui.prompt.addEventListener("focus", scheduleScrollMessagesToEnd);
+ui.prompt.addEventListener("input", () => {
+  resizePrompt();
+  scheduleScrollMessagesToEnd();
+});
 ui.stop.addEventListener("click", () => request?.abort());
 ui.mic.addEventListener("click", () => voice ? stopVoice() : startVoice());
 ui.model.addEventListener("change", () => localStorage.setItem(MODEL_KEY, ui.model.value));
