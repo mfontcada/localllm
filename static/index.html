@@ -25,7 +25,27 @@
     </section>
     <footer>
       <form id="composer">
-        <button id="mic" class="secondary" type="button" aria-label="Start voice input" aria-pressed="false" aria-keyshortcuts="Alt+M" title="Start voice input (Alt+M)" disabled>Mic</button>
+        <button id="mic" class="secondary icon-button" type="button" aria-label="Start voice input" aria-pressed="false" aria-keyshortcuts="Alt+M" title="Start voice input (Alt+M)" disabled>
+          <svg class="icon icon-mic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3Z"/><path d="M19 11a7 7 0 0 1-14 0M12 18v4M8 22h8"/></svg>
+          <svg class="icon icon-stop" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+        </button>
+        <details id="voice-options" class="voice-options">
+          <summary aria-label="Voice settings" title="Voice settings">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16M8 4v4M15 10v4M11 16v4"/></svg>
+          </summary>
+          <div class="voice-popover">
+            <fieldset>
+              <legend>After speaking</legend>
+              <label><input id="voice-submit-review" type="radio" name="voice-submit" value="review"> Review transcript</label>
+              <label><input id="voice-submit-auto" type="radio" name="voice-submit" value="auto"> Send automatically</label>
+            </fieldset>
+            <fieldset>
+              <legend>Stop listening</legend>
+              <label><input id="voice-stop-manual" type="radio" name="voice-stop" value="manual"> Manual stop</label>
+              <label><input id="voice-stop-silence" type="radio" name="voice-stop" value="silence"> Stop after silence</label>
+            </fieldset>
+          </div>
+        </details>
         <textarea id="prompt" rows="1" aria-label="Message" placeholder="Message your local model" required></textarea>
         <button id="send">Send</button><button id="stop" class="secondary hidden" type="button">Stop</button>
       </form>

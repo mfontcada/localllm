@@ -46,10 +46,12 @@ Start the app from this directory in a third terminal:
 uv run --frozen python app.py
 ```
 
-Open <http://127.0.0.1:3000>. If NeMo was started after the page loaded,
-reload the page to enable the Mic button. Use `Alt+M` to start or stop voice
-input without clicking it. Text chat remains available when
-NeMo is stopped.
+Open <http://127.0.0.1:3000>. The Mic button becomes available automatically
+when NeMo is ready. Use `Alt+M` to start or stop voice input, or `Escape` to
+stop it. Voice options can leave the transcript for review or send it
+automatically, and can optionally stop after a pause. Open the sliders icon
+beside Mic to change these options. Text chat remains available when NeMo is
+stopped.
 
 ## Private remote access
 

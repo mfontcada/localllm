@@ -1,11 +1,23 @@
 const get = id => document.getElementById(id);
 const ui = Object.fromEntries([
   "clear", "composer", "messages", "mic", "model", "prompt", "send", "status", "stop", "voice-status",
-].map(id => [id.replace("-", "_"), get(id)]));
+  "voice-options", "voice-submit-review", "voice-submit-auto", "voice-stop-manual", "voice-stop-silence",
+].map(id => [id.replaceAll("-", "_"), get(id)]));
 const MODEL_KEY = "local-llm-model";
+const VOICE_AUTO_SEND_KEY = "local-llm-voice-auto-send";
+const VOICE_AUTO_STOP_KEY = "local-llm-voice-auto-stop";
 const MAX_VOICE_MS = 120_000;
+const SILENCE_THRESHOLD = 0.015;
+const SILENCE_MS = 1_200;
+const SPEECH_GRACE_MS = 500;
 let messages = [], request, voice;
 let modelsReady = false, voiceAvailable = false;
+let voiceStatusTimer;
+
+ui.voice_submit_auto.checked = localStorage.getItem(VOICE_AUTO_SEND_KEY) === "true";
+ui.voice_submit_review.checked = !ui.voice_submit_auto.checked;
+ui.voice_stop_silence.checked = localStorage.getItem(VOICE_AUTO_STOP_KEY) === "true";
+ui.voice_stop_manual.checked = !ui.voice_stop_silence.checked;
 
 function resizePrompt() {
   ui.prompt.style.height = "auto";
@@ -22,6 +34,10 @@ function updateControls() {
   ui.prompt.disabled = chatting;
   ui.prompt.readOnly = speaking;
   ui.mic.disabled = !voiceAvailable || chatting;
+  [ui.voice_submit_review, ui.voice_submit_auto, ui.voice_stop_manual, ui.voice_stop_silence]
+    .forEach(control => control.disabled = chatting || speaking);
+  ui.voice_options.classList.toggle("disabled", chatting || speaking);
+  if (chatting || speaking) ui.voice_options.open = false;
 }
 
 function setVoiceStatus(text, state = "") {
@@ -65,19 +81,28 @@ async function loadVoice() {
   const supported = window.isSecureContext && navigator.mediaDevices?.getUserMedia &&
     window.AudioContext && window.AudioWorkletNode && window.WebSocket;
   if (!supported) {
-    setVoiceStatus("");
+    setVoiceStatus("Voice input is not supported by this browser", "error");
+    ui.mic.title = "Voice input is not supported by this browser";
     return;
   }
-  try {
-    const response = await fetch("/api/voice/status");
-    const data = await response.json();
-    voiceAvailable = response.ok && data.available;
-    setVoiceStatus("");
-  } catch {
-    setVoiceStatus("");
-  } finally {
-    updateControls();
-  }
+  const check = async () => {
+    try {
+      const response = await fetch("/api/voice/status", { cache: "no-store" });
+      const data = await response.json();
+      voiceAvailable = response.ok && data.available;
+      setVoiceStatus(voiceAvailable ? "" : "Voice service unavailable — retrying…", voiceAvailable ? "" : "error");
+      ui.mic.title = voiceAvailable ? "Start voice input (Alt+M)" : "Voice service unavailable — retrying";
+    } catch {
+      voiceAvailable = false;
+      setVoiceStatus("Voice service unavailable — retrying…", "error");
+      ui.mic.title = "Voice service unavailable — retrying";
+    } finally {
+      updateControls();
+    }
+  };
+  await check();
+  clearInterval(voiceStatusTimer);
+  voiceStatusTimer = setInterval(check, 5_000);
 }
 
 function consume(line, state) {
@@ -153,22 +178,34 @@ async function releaseVoice(state, error = "") {
   voice = null;
   clearTimeout(state.limitTimer);
   clearTimeout(state.finishTimer);
+  clearInterval(state.clockTimer);
+  cancelAnimationFrame(state.silenceFrame);
   state.node?.disconnect();
   state.source?.disconnect();
   state.stream?.getTracks().forEach(track => track.stop());
   if (state.context && state.context.state !== "closed") await state.context.close();
   if (state.socket?.readyState === WebSocket.OPEN) state.socket.close();
   ui.mic.classList.remove("recording");
-  ui.mic.textContent = "Mic";
   ui.mic.setAttribute("aria-label", "Start voice input");
   ui.mic.setAttribute("aria-pressed", "false");
-  setVoiceStatus(error, error ? "error" : "");
+  setVoiceStatus(error || (voiceAvailable ? "" : "Voice service unavailable — retrying…"), error ? "error" : voiceAvailable ? "" : "error");
+  ui.mic.title = error || (voiceAvailable ? "Start voice input (Alt+M)" : "Voice service unavailable — retrying");
   updateControls();
   ui.prompt.focus();
 }
 
 function voiceError(event) {
   return event?.error?.message || "Voice transcription failed";
+}
+
+async function finishVoice(state) {
+  const text = ui.prompt.value.trim();
+  await releaseVoice(state);
+  if (ui.voice_submit_auto.checked && text && !request && ui.model.value) {
+    ui.prompt.value = "";
+    ui.prompt.style.height = "auto";
+    chat(text);
+  }
 }
 
 function handleVoiceEvent(state, event) {
@@ -181,10 +218,50 @@ function handleVoiceEvent(state, event) {
     if (transcript) state.finals.push(transcript);
     state.partial = "";
     renderVoice(state);
-    if (state.stopping) releaseVoice(state);
+    if (state.stopping) finishVoice(state);
   } else if (event.type === "error") {
     releaseVoice(state, voiceError(event));
   }
+}
+
+function formatElapsed(milliseconds) {
+  const seconds = Math.floor(milliseconds / 1_000);
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+function updateListeningStatus(state) {
+  if (voice !== state || state.stopping) return;
+  setVoiceStatus(`Listening… ${formatElapsed(performance.now() - state.startedAt)}`, "active");
+}
+
+function monitorSilence(state) {
+  if (voice !== state || state.stopping || !state.analyser) return;
+  const samples = new Uint8Array(state.analyser.fftSize);
+  state.analyser.getByteTimeDomainData(samples);
+  let total = 0;
+  for (const sample of samples) {
+    const value = (sample - 128) / 128;
+    total += value * value;
+  }
+  const rms = Math.sqrt(total / samples.length);
+  const elapsed = performance.now() - state.startedAt;
+  if (elapsed >= SPEECH_GRACE_MS && rms >= SILENCE_THRESHOLD) {
+    state.heardSpeech = true;
+    state.silenceSince = null;
+  } else if (state.heardSpeech && elapsed >= SPEECH_GRACE_MS) {
+    state.silenceSince ??= performance.now();
+    if (performance.now() - state.silenceSince >= SILENCE_MS) {
+      stopVoice();
+      return;
+    }
+  }
+  state.silenceFrame = requestAnimationFrame(() => monitorSilence(state));
+}
+
+function microphoneError(error) {
+  if (error.name === "NotAllowedError" || error.name === "SecurityError") return "Microphone permission was denied";
+  if (error.name === "NotFoundError") return "No microphone was found";
+  return error.message || "Voice input could not start";
 }
 
 async function startVoice() {
@@ -193,8 +270,11 @@ async function startVoice() {
     finals: [],
     partial: "",
     stopping: false,
+    heardSpeech: false,
+    silenceSince: null,
   };
   voice = state;
+  ui.voice_options.open = false;
   updateControls();
   setVoiceStatus("Requesting microphone…", "active");
   try {
@@ -232,9 +312,12 @@ async function startVoice() {
     }));
 
     state.context = new AudioContext({ sampleRate: 16000 });
+    await state.context.resume();
     await state.context.audioWorklet.addModule("/pcm-worklet.js");
     state.source = state.context.createMediaStreamSource(state.stream);
     state.node = new AudioWorkletNode(state.context, "pcm-capture");
+    state.analyser = state.context.createAnalyser();
+    state.analyser.fftSize = 512;
     const silent = state.context.createGain();
     silent.gain.value = 0;
     state.node.port.onmessage = message => {
@@ -242,15 +325,19 @@ async function startVoice() {
         state.socket.send(message.data);
       }
     };
+    state.source.connect(state.analyser);
     state.source.connect(state.node).connect(silent).connect(state.context.destination);
     state.limitTimer = setTimeout(() => stopVoice(), MAX_VOICE_MS);
+    state.startedAt = performance.now();
+    state.clockTimer = setInterval(() => updateListeningStatus(state), 250);
+    if (ui.voice_stop_silence.checked) monitorSilence(state);
     ui.mic.classList.add("recording");
-    ui.mic.textContent = "Stop";
     ui.mic.setAttribute("aria-label", "Stop voice input");
     ui.mic.setAttribute("aria-pressed", "true");
-    setVoiceStatus("Listening…", "active");
+    ui.mic.title = "Stop voice input (Alt+M)";
+    updateListeningStatus(state);
   } catch (error) {
-    await releaseVoice(state, error.message || "Voice input could not start");
+    await releaseVoice(state, microphoneError(error));
   }
 }
 
@@ -263,8 +350,12 @@ function stopVoice() {
   state.stream?.getTracks().forEach(track => track.stop());
   setVoiceStatus("Finishing transcription…", "active");
   if (state.socket?.readyState === WebSocket.OPEN) {
-    state.socket.send(JSON.stringify({ type: "input_audio_buffer.commit" }));
-    state.finishTimer = setTimeout(() => releaseVoice(state), 5000);
+    try {
+      state.socket.send(JSON.stringify({ type: "input_audio_buffer.commit" }));
+      state.finishTimer = setTimeout(() => releaseVoice(state), 5000);
+    } catch {
+      releaseVoice(state, "Voice connection closed before transcription finished");
+    }
   } else {
     releaseVoice(state, "Voice connection closed before transcription finished");
   }
@@ -289,11 +380,28 @@ document.addEventListener("keydown", event => {
     event.preventDefault();
     if (!ui.mic.disabled) ui.mic.click();
   }
+  if (event.key === "Escape" && ui.voice_options.open) {
+    event.preventDefault();
+    ui.voice_options.open = false;
+  } else if (event.key === "Escape" && voice) {
+    event.preventDefault();
+    stopVoice();
+  }
 });
 ui.prompt.addEventListener("input", resizePrompt);
 ui.stop.addEventListener("click", () => request?.abort());
 ui.mic.addEventListener("click", () => voice ? stopVoice() : startVoice());
 ui.model.addEventListener("change", () => localStorage.setItem(MODEL_KEY, ui.model.value));
+ui.voice_submit_auto.addEventListener("change", () => localStorage.setItem(VOICE_AUTO_SEND_KEY, "true"));
+ui.voice_submit_review.addEventListener("change", () => localStorage.setItem(VOICE_AUTO_SEND_KEY, "false"));
+ui.voice_stop_silence.addEventListener("change", () => localStorage.setItem(VOICE_AUTO_STOP_KEY, "true"));
+ui.voice_stop_manual.addEventListener("change", () => localStorage.setItem(VOICE_AUTO_STOP_KEY, "false"));
+ui.voice_options.querySelector("summary").addEventListener("click", event => {
+  if (ui.voice_options.classList.contains("disabled")) event.preventDefault();
+});
+document.addEventListener("click", event => {
+  if (ui.voice_options.open && !ui.voice_options.contains(event.target)) ui.voice_options.open = false;
+});
 ui.clear.addEventListener("click", () => {
   messages = [];
   ui.messages.innerHTML = '<div class="empty"><h2>New conversation</h2><p>The previous context has been cleared.</p></div>';
