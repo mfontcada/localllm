@@ -210,6 +210,23 @@ class AppIntegrationTests(unittest.IsolatedAsyncioTestCase):
         response = await self.client.get("/%2e%2e/app.py")
         self.assertEqual(response.status, 404)
 
+    async def test_chat_page_handles_mobile_keyboard_layout(self):
+        page = await self.client.get("/")
+        self.assertIn("interactive-widget=resizes-content", await page.text())
+
+        styles = await self.client.get("/style.css")
+        style_text = await styles.text()
+        self.assertIn("position: sticky", style_text)
+        self.assertIn("--app-height", style_text)
+        self.assertIn("overflow-anchor: none", style_text)
+
+        script = await self.client.get("/app.js")
+        script_text = await script.text()
+        self.assertIn("visualViewport", script_text)
+        self.assertIn("scrollMessagesToEnd", script_text)
+        self.assertIn("scheduleScrollMessagesToEnd", script_text)
+        self.assertIn('addEventListener("focus", scheduleScrollMessagesToEnd)', script_text)
+
 
 if __name__ == "__main__":
     unittest.main()
