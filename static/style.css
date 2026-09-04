@@ -24,14 +24,33 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .message.user { margin-left: auto; padding: 13px 15px; border-radius: 15px; background: #24272d; }
 .message.error { color: #ffaaa2; }
 footer { min-width: 0; padding-top: 12px; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
-form { min-width: 0; padding: 8px; border-radius: 16px; }
+form { position: relative; min-width: 0; padding: 5px; border-radius: 16px; }
 textarea { min-width: 0; flex: 1 1 auto; max-height: 180px; padding: 9px; border: 0; outline: 0; resize: none; overflow-y: auto; background: transparent; }
-#mic { min-width: 54px; }
-#mic.recording { color: #fff; background: #b83232; }
+#mic { min-width: 44px; }
+.icon-button, .voice-options summary { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 11px; background: #25282e; touch-action: manipulation; }
+.icon { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.icon-stop { display: none; }
+#mic.recording { color: #fff; background: #b83232; animation: voice-pulse 1.6s ease-in-out infinite; }
+#mic.recording .icon-mic { display: none; }
+#mic.recording .icon-stop { display: block; }
 #voice-status { display: block; margin: 5px 10px 0; font-size: .75rem; }
 #voice-status:empty { display: none; }
 #voice-status[data-state="active"] { color: #d7d9df; }
 #voice-status[data-state="error"] { color: #ffaaa2; }
+.voice-options { position: relative; flex: 0 0 auto; color: #969aa3; }
+.voice-options summary { cursor: pointer; list-style: none; }
+.voice-options summary::-webkit-details-marker { display: none; }
+.voice-options summary:hover, .voice-options summary:focus-visible { color: #fff; background: #30343c; outline: 2px solid #707987; outline-offset: 1px; }
+.voice-options.disabled { opacity: .45; }
+.voice-options.disabled summary { cursor: not-allowed; }
+.voice-popover { position: absolute; z-index: 10; bottom: calc(100% + 10px); left: 0; width: min(280px, calc(100vw - 24px)); padding: 14px; border: 1px solid #343740; border-radius: 14px; color: #e8e8ea; background: #1a1c20; box-shadow: 0 12px 34px rgb(0 0 0 / 35%); }
+.voice-popover fieldset { margin: 0; padding: 0; border: 0; }
+.voice-popover fieldset + fieldset { margin-top: 14px; }
+.voice-popover legend { margin-bottom: 7px; color: #969aa3; font-size: .72rem; font-weight: 700; text-transform: uppercase; }
+.voice-popover label { display: flex; align-items: center; gap: 8px; min-height: 34px; cursor: pointer; }
+.voice-popover input { width: 16px; height: 16px; accent-color: #aeb9ff; }
+@media (prefers-reduced-motion: reduce) { #mic.recording { animation: none; } }
+@keyframes voice-pulse { 50% { box-shadow: 0 0 0 4px rgb(184 50 50 / 22%); } }
 .hidden { display: none; }
 @media (max-width:680px) {
   main { padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 0 max(12px, env(safe-area-inset-left)); }
@@ -39,6 +58,8 @@ textarea { min-width: 0; flex: 1 1 auto; max-height: 180px; padding: 9px; border
   nav { flex: 0 1 auto; flex-wrap: wrap; justify-content: flex-end; }
   nav label { display: none; }
   select { min-width: 0; max-width: 150px; }
+  form { gap: 4px; }
+  textarea { padding-left: 6px; padding-right: 6px; }
   .message { max-width: 92%; }
 }
 @media (max-width:380px) {
@@ -59,8 +80,10 @@ textarea { min-width: 0; flex: 1 1 auto; max-height: 180px; padding: 9px; border
   header { border-color: #dddfe4; }
   small,.empty { color: #686c74; }
   .empty h2 { color: #25262a; }
-  select,textarea,form { color: #25262a; border-color: #d8dae0; background: #fff; }
+  select,textarea,form,.voice-popover { color: #25262a; border-color: #d8dae0; background: #fff; }
   .secondary,.message.user { color: #25262a; background: #e9eaf0; }
   #voice-status[data-state="active"] { color: #4f535b; }
   #voice-status[data-state="error"] { color: #a62020; }
+  .voice-options summary:hover, .voice-options summary:focus-visible { color: #25262a; background: #dfe1e8; }
+  .voice-popover legend { color: #686c74; }
 }
